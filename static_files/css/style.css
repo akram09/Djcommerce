@@ -3,9 +3,7 @@ html,
 body,
 .view {
   height: 100%; }
-.main_container{
-  margin-top: 20px; 
-}
+
 
 /* Half Page Carousel itself*/
 .carousel {

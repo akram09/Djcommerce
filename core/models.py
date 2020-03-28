@@ -40,7 +40,6 @@ class Item(models.Model):
         })
 
 
-
 class OrderItem(models.Model):
     item = models.ForeignKey(Item , on_delete =models.CASCADE)
     quantity  = models.PositiveIntegerField(default=1)
@@ -48,6 +47,13 @@ class OrderItem(models.Model):
     ordered = models.BooleanField(default = False)
     def __str__(self):
         return "Item named {} with quantity {}".format(self.item.title , self.quantity)
+    def get_total_price(self):
+        if self.item.discounted_price:
+            return self.item.discounted_price *self.quantity
+        else:
+            return self.item.price *self.quantity
+    def get_amount_saved(self):
+        return (self.item.price - self.item.discounted_price) * self.quantity
 
 class Order(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL , on_delete= models.CASCADE)
@@ -57,3 +63,5 @@ class Order(models.Model):
     ordered_date = models.DateTimeField(blank = True , null = True)
     def __str__(self):
         return "Order of the user {}  has {} items".format(self.user, self.items.count())
+    def get_total_amount(self):
+        return sum(map(OrderItem.get_total_price, self.items.all()))
