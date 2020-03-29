@@ -21,16 +21,20 @@
             <th scope="row">{{forloop.counter}}</th>
             <td>{{orderItem.item.title}}</td>
             <td>
-              <a class="mr-2"><i class="fas fa-plus"></i></a>
+              <a class="mr-2" href="{% url 'core:add-quantity' orderItem.item.slug %}"><i class="fas fa-plus"></i></a>
               {{ orderItem.item.price }}
-              <a class="ml-2 "><i class="fas fa-minus"></i></a>
+              <a class="ml-2 " href="{% url 'core:minus-quantity' orderItem.item.slug %}"><i class="fas fa-minus"></i></a>
             </td>
             <td>{{orderItem.quantity}}</td>
             <td>{{orderItem.get_total_price}}
                 {% if orderItem.item.discounted_price %}
                 <span class="badge badge-primary">Saved {{orderItem.get_amount_saved}}$</span>
                 {% endif %}
+                <a href="{% url 'core:remove-product' orderItem.item.slug %}" class="float-right">
+                  <i class="fas fa-trash"></i>
+                </a>
             </td>
+
           </tr>
           {% endfor %}
           <tr>

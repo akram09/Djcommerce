@@ -7,6 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, View, DetailView
+from .forms import CheckoutForm
 # Create your views here.
 
 
@@ -60,8 +61,70 @@ def remove_from_cart(request, slug):
     else:
         messages.error( request ,"You dont have an active order")
         return redirect("core:item", slug = slug)
-def checkout(request ):
-    return render(request , "checkout-page.html")
+
+
+class CheckoutView(LoginRequiredMixin,View):
+    def get(self, *args , **kwargs):
+        context={
+            'form':CheckoutForm()
+        }
+        return render(self.request , 'checkout-page.html', context )
+    def post(self , *args , **kwargs):
+        form = CheckoutForm(self.request.POST or None)
+        print(self.request.POST)
+        if form.is_valid():
+            return redirect('core:checkout')
+        return redirect('core:checkout')
+
+
+
+@login_required
+def add_quantity(request , slug):
+    item = get_object_or_404(Item , slug = slug)
+    order = Order.objects.get(user = request.user , ordered =False)
+    orderItem = order.items.get(item = item , ordered = False, user = request.user)
+    orderItem.quantity +=1
+    orderItem.save()
+    messages.success(request , "We have increased the quantity ")
+    return redirect("core:cart-summary")
+
+@login_required
+def minus_quantity(request, slug):
+    item = get_object_or_404(Item , slug = slug)
+    order = Order.objects.get(user = request.user , ordered =False)
+    if order.items.filter(item__slug = slug ).exists():
+        orderItem = OrderItem.objects.get(
+        user = request.user ,
+        ordered = False,
+        item = item)
+        if orderItem.quantity !=1:
+            orderItem.quantity -= 1
+            orderItem.save()
+            messages.success(request , "Product quantity decreased")
+        else:
+            orderItem.delete()
+        messages.success(request , "Product removed from Cart ")
+        return redirect("core:cart-summary")
+    else:
+        messages.error( request ,"You havn't purcahsed any product like this ")
+        return redirect("core:cart-summary")
+
+@login_required
+def delete_product(request, slug):
+    item = get_object_or_404(Item , slug = slug)
+    order = Order.objects.get(user = request.user , ordered =False)
+    if order.items.filter(item__slug = slug ).exists():
+        orderItem = OrderItem.objects.get(
+        user = request.user ,
+        ordered = False,
+        item = item)
+        orderItem.delete()
+        messages.success(request , "Product removed from Cart ")
+        return redirect("core:cart-summary")
+    else:
+        messages.error( request ,"You havn't purcahsed any product like this ")
+        return redirect("core:cart-summary")
+
 
 class OrderSummary(LoginRequiredMixin,DetailView):
     def get(self , *args , **kwargs):
