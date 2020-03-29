@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Item, OrderItem , Order
+from .models import Item, OrderItem , Order, BillingAdress
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.contrib import messages
@@ -71,10 +71,31 @@ class CheckoutView(LoginRequiredMixin,View):
         return render(self.request , 'checkout-page.html', context )
     def post(self , *args , **kwargs):
         form = CheckoutForm(self.request.POST or None)
-        print(self.request.POST)
-        if form.is_valid():
-            return redirect('core:checkout')
-        return redirect('core:checkout')
+        try:
+            order =Order.objects.get( user = user , ordered = False)
+            if form.is_valid():
+                street_adress =form.cleaned_data.get('street_adress')
+                appartement_adress = form.cleaned_data.get('appartement_adress')
+                country = form.cleaned_data.get('country')
+                zip = form.cleaned_data.get('zip')
+                same_shipping_adress = form.cleaned_data.get('same_shipping_adress')
+                save_info = form.cleaned_data.get('save_info')
+                payment_option = form.cleaned_data.get('pament_option')
+                billing_adress = BillingAdress(
+                    user = request.user ,
+                    street_adress = street_adress,
+                    appartement_adress = appartement_adress,
+                    countries = Country,
+                    zip = zip
+                )
+                billing_adress.save()
+                return redirect('core:checkout')
+            else:
+                messages.error(self.request , "Invalid Input ")
+                return redirect("core:checkout")
+        except ObjectDoesNotExist as e:
+            messages.error(self.request , "You don't have any active order")
+            return redirect("core:cart-summary")
 
 
 
@@ -138,3 +159,6 @@ class OrderSummary(LoginRequiredMixin,DetailView):
         except ObjectDoesNotExist as e:
             messages.error(self.request , "You don't have any active order")
             return redirect("/")
+class PaymentView(View):
+    def get(self , *args , **kwargs):
+        return render(self.request , "payment-page.html")

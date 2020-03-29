@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.urls import reverse
+from django_countries.fields import CountryField
 
 # Create your models here.
 CLOTHES_CATEGORIES = (
@@ -61,7 +62,27 @@ class Order(models.Model):
     items = models.ManyToManyField(OrderItem)
     start_date  = models.DateTimeField(auto_now_add = True)
     ordered_date = models.DateTimeField(blank = True , null = True)
+    billing_adress = models.ForeignKey("BillingAdress", on_delete= models.SET_NULL , blank = True , null = True)
+    payment = models.ForeignKey("Payment", on_delete= models.SET_NULL , blank = True , null = True)
+
     def __str__(self):
         return "Order of the user {}  has {} items".format(self.user, self.items.count())
     def get_total_amount(self):
         return sum(map(OrderItem.get_total_price, self.items.all()))
+
+
+class BillingAdress(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL , on_delete= models.CASCADE)
+    street_adress = models.CharField(max_length= 100)
+    appartement_adress = models.CharField(max_length= 100)
+    countries = CountryField(multiple = False)
+    zip = models.CharField(max_length= 100)
+    def __str__(self):
+        return self.user.username
+class Payment(models.Model):
+    timestamp  = models.TimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete= models.SET_NULL , blank = True , null = True)
+    amount = models.FloatField()
+    stripe_charge_id =  models.CharField(max_length= 50)
+    def __str__(self):
+        return self.user.username
