@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Item, OrderItem , Order, BillingAdress
+from .models import Item, OrderItem , Order, BillingAdress, Payment
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.contrib import messages
@@ -8,6 +8,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, View, DetailView
 from .forms import CheckoutForm
+import stripe
+stripe.api_key = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"
 # Create your views here.
 
 
@@ -72,7 +74,7 @@ class CheckoutView(LoginRequiredMixin,View):
     def post(self , *args , **kwargs):
         form = CheckoutForm(self.request.POST or None)
         try:
-            order =Order.objects.get( user = user , ordered = False)
+            order =Order.objects.get( user = self.request.user , ordered = False)
             if form.is_valid():
                 street_adress =form.cleaned_data.get('street_adress')
                 appartement_adress = form.cleaned_data.get('appartement_adress')
@@ -82,10 +84,10 @@ class CheckoutView(LoginRequiredMixin,View):
                 save_info = form.cleaned_data.get('save_info')
                 payment_option = form.cleaned_data.get('pament_option')
                 billing_adress = BillingAdress(
-                    user = request.user ,
+                    user = self.request.user ,
                     street_adress = street_adress,
                     appartement_adress = appartement_adress,
-                    countries = Country,
+                    countries = country,
                     zip = zip
                 )
                 billing_adress.save()
@@ -162,3 +164,43 @@ class OrderSummary(LoginRequiredMixin,DetailView):
 class PaymentView(View):
     def get(self , *args , **kwargs):
         return render(self.request , "payment-page.html")
+    def post(self, *args, **kwaargs):
+        order = Order.objects.get(user = self.request.user , ordered =False)
+        token = self.request.POST.get('stripeToken')
+
+        try:
+            charge = stripe.Charge.create(
+            currency ='eur', source =token, amount =int(order.get_total_amount())*100
+            )
+            payment  = Payment()
+            payment.stripe_charge_id = charge['id']
+            payment.user = self.request.user
+            payment.amount = order.get_total_amount()*100
+            payment.save()
+            order.ordered = True
+            order.payment = payment
+            order.save()
+            messages.success(self.request, "Your order has been successfull")
+            return redirect('/')
+        except stripe.error.CardError as e:
+            # Since it's a decline, stripe.error.CardError will be caught
+            messages.error(self.request , e.error.message)
+        except stripe.error.RateLimitError as e:
+            # Too many requests made to the API too quickly
+            messages.error(self.request ,"API ")
+            return redirect('/')
+        except stripe.error.InvalidRequestError as e:
+            messages.error(self.request ,"API ")
+            return redirect('/')
+        except stripe.error.AuthenticationError as e:
+            messages.error(self.request ,"API ")
+            return redirect('/')
+        except stripe.error.APIConnectionError as e:
+            messages.error(self.request ,"API ")
+            return redirect('/')
+        except stripe.error.StripeError as e:
+            messages.error(self.request ,"API ")
+            return redirect('/')
+        except Exception as e:
+            messages.error(self.request ,"API ")
+            return redirect('/')
