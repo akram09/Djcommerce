@@ -163,7 +163,11 @@ class OrderSummary(LoginRequiredMixin,DetailView):
             return redirect("/")
 class PaymentView(View):
     def get(self , *args , **kwargs):
-        return render(self.request , "payment-page.html")
+        order = Order.objects.get(user = self.request.user , ordered =False)
+        context = {
+            'order': order
+        }
+        return render(self.request , "payment-page.html" , context)
     def post(self, *args, **kwaargs):
         order = Order.objects.get(user = self.request.user , ordered =False)
         token = self.request.POST.get('stripeToken')
