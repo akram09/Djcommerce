@@ -171,7 +171,8 @@ class PaymentView(View):
     def post(self, *args, **kwaargs):
         order = Order.objects.get(user = self.request.user , ordered =False)
         token = self.request.POST.get('stripeToken')
-
+        print("POST pramatre are : {}".format(self.request.POST))
+        print("Token is : ".format(token))
         try:
             charge = stripe.Charge.create(
             currency ='eur', source =token, amount =int(order.get_total_amount())*100

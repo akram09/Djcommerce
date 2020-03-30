@@ -188,7 +188,7 @@ button:hover {
 {% block extra_scripts %}
 
   <script nonce="">  // Create a Stripe client.
-    var stripe = Stripe('');
+    var stripe = Stripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
 
     // Create an instance of Elements.
     var elements = stripe.elements();
@@ -230,11 +230,13 @@ button:hover {
     // Handle form submission.
     var form = document.getElementById('stripe-form');
     form.addEventListener('submit', function(event) {
+      console.log("Clicked");
       event.preventDefault();
 
       stripe.createToken(card).then(function(result) {
         if (result.error) {
           // Inform the user if there was an error.
+          console.log("There is an error", result.error.message);
           var errorElement = document.getElementById('card-errors');
           errorElement.textContent = result.error.message;
         } else {
