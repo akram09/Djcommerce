@@ -34,7 +34,6 @@ def add_to_cart(request , slug ):
             orderItem.save()
         else:
             order.items.add(orderItem)
-
     else:
         order = Order.objects.create(user = request.user)
         messages.info(request  , "A new Order have been created")
@@ -185,6 +184,9 @@ class PaymentView(View):
             order.ordered = True
             order.payment = payment
             order.save()
+            for orderItem in order.items.all():
+                orderItem.ordered = True
+                orderItem.save()
             messages.success(self.request, "Your order has been successfull")
             return redirect('/')
         except stripe.error.CardError as e:
@@ -207,5 +209,6 @@ class PaymentView(View):
             messages.error(self.request ,"API ")
             return redirect('/')
         except Exception as e:
+            print(e)
             messages.error(self.request ,"API ")
             return redirect('/')
