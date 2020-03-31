@@ -32,4 +32,13 @@ python manage.py runserver
 python manage.py createsuperuser
 ```
 
-​	or you can do it manually by going to the /accounts/signup
+## Docker Installation
+
+for now the docker compose have only the web container that use simple Sqlite file, I will be adding nginx server and postgres as Db 
+
+```bash
+docker-compose build
+docker-compose up -d 
+```
+
+ 
