@@ -1,13 +1,14 @@
 from django.shortcuts import render
-from .models import Item, OrderItem , Order, BillingAdress, Payment
+from .models import Item, OrderItem , Order, BillingAdress, Payment, Coupon
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.contrib import messages
+from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, View, DetailView
-from .forms import CheckoutForm
+from .forms import CheckoutForm, CouponForm
 import stripe
 stripe.api_key = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"
 # Create your views here.
@@ -66,10 +67,19 @@ def remove_from_cart(request, slug):
 
 class CheckoutView(LoginRequiredMixin,View):
     def get(self, *args , **kwargs):
-        context={
-            'form':CheckoutForm()
-        }
-        return render(self.request , 'checkout-page.html', context )
+        try:
+            order =Order.objects.get( user = self.request.user , ordered = False)
+            context={
+            'form':CheckoutForm(),
+            'order':order,
+            'couponform':CouponForm(),
+            'DISPLAY_COUPON_FORM':True
+            }
+            return render(self.request , 'checkout-page.html', context )
+        except ObjectDoesNotExist as e:
+            messages.error(self.request , "You don't have any active order")
+            return redirect("core:cart-summary")
+
     def post(self , *args , **kwargs):
         form = CheckoutForm(self.request.POST or None)
         try:
@@ -90,7 +100,9 @@ class CheckoutView(LoginRequiredMixin,View):
                     zip = zip
                 )
                 billing_adress.save()
-                return redirect('core:checkout')
+                order.billing_adress = billing_adress
+                order.save()
+                return redirect('core:payment')
             else:
                 messages.error(self.request , "Invalid Input ")
                 return redirect("core:checkout")
@@ -183,6 +195,7 @@ class PaymentView(View):
             payment.save()
             order.ordered = True
             order.payment = payment
+            order.ordered_date= datetime.now()
             order.save()
             for orderItem in order.items.all():
                 orderItem.ordered = True
@@ -212,3 +225,34 @@ class PaymentView(View):
             print(e)
             messages.error(self.request ,"API ")
             return redirect('/')
+
+
+
+
+
+###   Coupons
+
+
+def get_coupon(request, code):
+    try:
+        coupon = Coupon.objects.get(code=code)
+        return coupon
+    except ObjectDoesNotExist:
+        messages.info(request, "This coupon does not exist")
+        return redirect("core:checkout")
+
+class AddCouponView(View):
+    def post(self, *args, **kwargs):
+        form = CouponForm(self.request.POST or None)
+        if form.is_valid():
+            try:
+                code = form.cleaned_data.get('code')
+                order = Order.objects.get(
+                    user=self.request.user, ordered=False)
+                order.coupon = get_coupon(self.request, code)
+                order.save()
+                messages.success(self.request, "Successfully added coupon")
+                return redirect("core:checkout")
+            except ObjectDoesNotExist:
+                messages.info(self.request, "You do not have an active order")
+                return redirect("core:checkout")

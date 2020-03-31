@@ -24,6 +24,7 @@ class Item(models.Model):
     category = models.CharField(choices = CLOTHES_CATEGORIES, max_length=2)
     slug = models.SlugField()
     description  = models.TextField(default= "Lorem Ipsum ")
+    image  = models.ImageField(blank= True, null= True)
     def __str__(self):
         return self.title
 
@@ -64,11 +65,14 @@ class Order(models.Model):
     ordered_date = models.DateTimeField(blank = True , null = True)
     billing_adress = models.ForeignKey("BillingAdress", on_delete= models.SET_NULL , blank = True , null = True)
     payment = models.ForeignKey("Payment", on_delete= models.SET_NULL , blank = True , null = True)
-
+    coupon = models.ForeignKey('Coupon', on_delete= models.SET_NULL , blank = True , null = True)
     def __str__(self):
         return "Order of the user {}  has {} items".format(self.user, self.items.count())
     def get_total_amount(self):
-        return sum(map(OrderItem.get_total_price, self.items.all()))
+        if self.coupon :
+            return sum(map(OrderItem.get_total_price, self.items.all())) - self.coupon.amount
+        else:
+            return sum(map(OrderItem.get_total_price, self.items.all()))
 
 
 class BillingAdress(models.Model):
@@ -86,3 +90,9 @@ class Payment(models.Model):
     stripe_charge_id =  models.CharField(max_length= 50)
     def __str__(self):
         return self.user.username
+
+class Coupon(models.Model):
+    code  = models.CharField(max_length= 15)
+    amount =models.FloatField()
+    def __str__(self):
+        return self.code
