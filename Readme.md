@@ -1,3 +1,10 @@
+# Djcommerce
+Djcommerce is a full e-commerce web application built with the Django framework. built with performance and ease-of-use in mind.
+## Current features.
+- Home page
+- Cart system
+- Payment page
+
 ### Installation
 
 ```bash
